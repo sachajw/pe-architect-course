@@ -86,7 +86,7 @@ list-docs              # List all documentation files
 
 # Shell Management
 szsh                    # Reload zsh configuration
-kezsh                    # Edit zsh configuration
+ezsh                    # Edit zsh configuration
 
 # Kubernetes (kubectl aliases)
 k get pods              # Get pods (k = kubectl)
