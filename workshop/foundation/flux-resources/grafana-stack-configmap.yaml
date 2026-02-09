@@ -25,6 +25,14 @@ data:
 
     # Grafana configuration
     grafana:
+      # Fix for init container permission issues
+      initChownData:
+        enabled: false
+      # Set security context instead
+      securityContext:
+        runAsUser: 472
+        runAsGroup: 472
+        fsGroup: 472
       resources:
         requests:
           memory: 256Mi
