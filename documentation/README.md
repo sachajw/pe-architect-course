@@ -1,7 +1,7 @@
 # PE Architecture - Remote Development Environment Documentation
 
-**Environment:** pe architecture (pangarabbit.coder)  
-**Last Updated:** February 8, 2025  
+**Environment:** pe architecture (pangarabbit.coder)
+**Last Updated:** February 10, 2026
 **Status:** ✅ Fully Configured
 
 ## Overview
@@ -63,6 +63,14 @@ This directory contains comprehensive documentation for your remote Platform Eng
    - Port forwarding setup (Zed and manual)
    - Troubleshooting connection issues
    - Alternative access methods
+
+### Coder Platform
+
+9. **[CODER_DEVCONTAINER_FIX.md](./CODER_DEVCONTAINER_FIX.md)**
+   - Devcontainer detection error fix
+   - Root cause analysis (envbuilder PATH issue)
+   - Permanent fix for postCreateCommand.sh
+   - Workspace health check procedures
 
 ## 🚀 Quick Start
 
@@ -338,7 +346,7 @@ Found an issue or have improvements?
 
 ---
 
-**📍 Documentation Location:** `/workspaces/pe-coder-aidp/documentation/`  
-**🚀 Quick Access:** `docs` (alias) or browse in Zed file explorer  
-**📖 Total Files:** 9 documentation files  
-**✨ Last Updated:** February 8, 2025 ✓
+**📍 Documentation Location:** `/workspaces/pe-coder-aidp/documentation/`
+**🚀 Quick Access:** `docs` (alias) or browse in Zed file explorer
+**📖 Total Files:** 10 documentation files
+**✨ Last Updated:** February 10, 2026 ✓
