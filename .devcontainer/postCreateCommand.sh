@@ -94,16 +94,16 @@ else
   echo "glow is already installed."
 fi
 
-# Install Bitwarden CLI
-if ! command -v bw &> /dev/null
+# Install Bitwarden Secrets Manager CLI
+if ! command -v bws &> /dev/null
 then
-  echo "Bitwarden CLI not found. Installing..."
-  curl -sLO "https://github.com/bitwarden/clients/releases/download/cli-v2025.1.0/bw-linux-2025.1.0.zip"
-  unzip bw-linux-*.zip
-  run_as_root mv bw /usr/local/bin/bw
-  rm bw-linux-*.zip
+  echo "Bitwarden Secrets Manager CLI not found. Installing..."
+  curl -sLO "https://github.com/bitwarden/sdk/releases/download/bws-v0.5.0/bws-x86_64-unknown-linux-gnu-0.5.0.zip"
+  unzip bws-x86_64-*-*.zip
+  run_as_root mv bws /usr/local/bin/bws
+  rm bws-x86_64-*-*.zip
 else
-  echo "Bitwarden CLI is already installed."
+  echo "Bitwarden Secrets Manager CLI is already installed."
 fi
 
 # Check if kubectl is installed
