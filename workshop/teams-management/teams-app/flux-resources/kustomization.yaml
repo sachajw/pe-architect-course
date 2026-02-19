@@ -3,6 +3,7 @@ kind: Kustomization
 namespace: engineering-platform
 resources:
   - namespace.yaml
+  - teams-api-alias.yaml
   - deployment.yaml
   - service.yaml
   - ingress.yaml
