@@ -1,11 +1,20 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: teams-api-data
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: teams-api
   labels:
     app: teams-api
-  annotations:
-    commit-sha: 8b514a1cb354
 spec:
   replicas: 1
   selector:
@@ -23,6 +32,13 @@ spec:
         fsGroup: 1001
         seccompProfile:
           type: RuntimeDefault
+      initContainers:
+      - name: install-deps
+        image: python:3.11-slim
+        command: ['sh', '-c', 'pip install aiosqlite==0.19.0 --target /app-deps']
+        volumeMounts:
+        - name: deps
+          mountPath: /app-deps
       containers:
       - name: teams-api
         image: olivercodes01/teams-api:0.0.2
@@ -31,12 +47,26 @@ spec:
         env:
         - name: PORT
           value: "8000"
+        - name: DATABASE_PATH
+          value: "/data/teams.db"
+        - name: PYTHONPATH
+          value: "/app:/app-deps"
+        command: ["python", "/app-override/main.py"]
+        volumeMounts:
+        - name: data
+          mountPath: /data
+        - name: app-override
+          mountPath: /app-override
+          readOnly: true
+        - name: deps
+          mountPath: /app-deps
+          readOnly: true
         securityContext:
           runAsNonRoot: true
           runAsUser: 1001
           runAsGroup: 1001
           allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: false
+          readOnlyRootFilesystem: true
           capabilities:
             drop:
             - ALL
@@ -59,8 +89,17 @@ spec:
           httpGet:
             path: /health
             port: 8000
-          initialDelaySeconds: 5
+          initialDelaySeconds: 10
           periodSeconds: 5
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: teams-api-data
+      - name: app-override
+        configMap:
+          name: teams-api-code
+      - name: deps
+        emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
