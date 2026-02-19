@@ -71,7 +71,7 @@ spec:
     app: teams-api
   ports:
     - protocol: TCP
-      port: 4200
+      port: 8000
       targetPort: 8000
   type: ClusterIP
 ---
@@ -96,4 +96,4 @@ spec:
           service:
             name: teams-api-service
             port:
-              number: 4200
+              number: 8000

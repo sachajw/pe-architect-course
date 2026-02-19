@@ -5,7 +5,3 @@ metadata:
 spec:
   type: ExternalName
   externalName: teams-api-service.teams-api.svc.cluster.local
-  ports:
-  - port: 8000
-    targetPort: 8000
-    protocol: TCP
