@@ -15,7 +15,7 @@ This document covers the SSH configuration for connecting to your Coder workspac
 | Connection multiplexing | ✅ | Socket active at `~/.ssh/sockets/` |
 | Auto-tmux | ✅ | Session "main" persists |
 | SOCKS proxy | ✅ | Traffic routes through workspace IP |
-| Port forwards | ✅ | 4739, 3000, 8080 active |
+| Port forwards | ✅ | All services forwarded |
 | SSH agent forwarding | ✅ | Git push works without keys |
 
 ## SSH Shortcuts
@@ -32,13 +32,49 @@ This document covers the SSH configuration for connecting to your Coder workspac
 
 ## Port Forwards
 
-| Local Port | Remote Port | Service |
-|------------|-------------|---------|
-| 4739 | 4739 | Capacitor Dashboard |
-| 3001 | 3000 | Grafana |
-| 8000 | 8000 | Teams API |
-| 4200 | 4200 | Teams Web UI |
-| 8180 | 8180 | Keycloak SSO |
+| Local Port | Remote Port | Service | URL (after SSH) |
+|------------|-------------|---------|-----------------|
+| 4739 | 4739 | Capacitor Dashboard | http://localhost:4739 |
+| 3001 | 3000 | Grafana | http://localhost:3001 |
+| 8000 | 8000 | Teams API | http://localhost:8000 |
+| 4200 | 4200 | Teams Web UI | http://localhost:4200 |
+| 8180 | 8180 | Keycloak SSO | http://localhost:8180 |
+
+### Service Quick Access
+
+After connecting with `ssh pangarabbit.coder`:
+
+| Service | Local URL | Credentials |
+|---------|-----------|-------------|
+| Capacitor | http://localhost:4739 | - |
+| Grafana | http://localhost:3001 | admin / admin123 |
+| Teams API | http://localhost:8000/docs | - |
+| Teams Web UI | http://localhost:4200 | - |
+| Keycloak Admin | http://localhost:8180 | admin / admin |
+
+### Port Forward Aliases
+
+```bash
+# Grafana
+graf-fwd          # Start Grafana port-forward
+graf-stop         # Stop Grafana port-forward
+graf-status       # Check Grafana port-forward
+
+# Teams API
+teams-api-fwd     # Start Teams API port-forward
+teams-api-stop    # Stop Teams API port-forward
+teams-api-status  # Check Teams API port-forward
+
+# Teams UI
+teams-ui-fwd      # Start Teams UI port-forward
+teams-ui-stop     # Stop Teams UI port-forward
+teams-ui-status   # Check Teams UI port-forward
+
+# Keycloak
+keycloak-fwd      # Start Keycloak port-forward
+keycloak-stop     # Stop Keycloak port-forward
+keycloak-status   # Check Keycloak port-forward
+```
 
 ## Connection Features
 
@@ -115,10 +151,6 @@ curl --socks5 localhost:1080 https://ifconfig.me
 pkill -f "ssh.*proxy.pangarabbit"
 ```
 
-**Verified Results:**
-- Direct IP: `197.89.115.194` (local)
-- Via SOCKS: `35.198.165.220` (workspace)
-
 **Use Cases:**
 - Access internal Kubernetes services from local browser
 - Browse as if you're in the workspace
@@ -160,9 +192,11 @@ Host *
 # Main host - NO RemoteCommand (required for Zed)
 Host pangarabbit.coder
     User root
-    LocalForward 4739 localhost:4739
-    LocalForward 3001 localhost:3000
-    LocalForward 8080 localhost:8080
+    LocalForward 4739 localhost:4739    # Capacitor
+    LocalForward 3001 localhost:3000    # Grafana
+    LocalForward 8000 localhost:8000    # Teams API
+    LocalForward 4200 localhost:4200    # Teams Web UI
+    LocalForward 8180 localhost:8180    # Keycloak
 
 # Terminal with auto-tmux
 Host t.pangarabbit
@@ -344,7 +378,7 @@ ssh-clean
 # Terminal session with tmux persistence
 ssh t.pangarabbit
 # → Opens in tmux session "main"
-# → Port forwards active (4739, 3001, 8080)
+# → Port forwards active
 
 # Detach but keep session running
 Ctrl+B D

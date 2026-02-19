@@ -94,6 +94,20 @@ else
   echo "glow is already installed."
 fi
 
+# Install Starship prompt
+if ! command -v starship &> /dev/null
+then
+  echo "starship not found. Installing..."
+  curl -sS https://starship.rs/install.sh | sh -s -- -y
+else
+  echo "starship is already installed."
+fi
+
+# Configure starship
+mkdir -p $HOME/.config
+cp .devcontainer/configs/starship.toml $HOME/.config/starship.toml
+echo 'eval "$(starship init zsh)"' >> $HOME/.zshrc
+
 # Install Bitwarden Secrets Manager CLI
 if ! command -v bws &> /dev/null
 then
