@@ -4,6 +4,8 @@ metadata:
   name: teams-operator
   labels:
     app: teams-operator
+  annotations:
+    commit-sha: "8b514a1cb354"
 spec:
   replicas: 1
   selector:
