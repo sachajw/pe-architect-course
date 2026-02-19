@@ -35,9 +35,10 @@ This document covers the SSH configuration for connecting to your Coder workspac
 | Local Port | Remote Port | Service |
 |------------|-------------|---------|
 | 4739 | 4739 | Capacitor Dashboard |
-| 3001 | 3000 | Grafana / General |
+| 3001 | 3000 | Grafana |
+| 8000 | 8000 | Teams API |
+| 4200 | 4200 | Teams Web UI |
 | 8080 | 8080 | General Purpose |
-| 8443 | 8443 | HTTPS |
 
 ## Connection Features
 

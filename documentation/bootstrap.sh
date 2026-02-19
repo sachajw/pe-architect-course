@@ -111,6 +111,16 @@ if [[ -z "$CAPACITOR_STARTED" && $SHLVL -eq 1 ]]; then
         nohup kubectl port-forward -n monitoring svc/grafana-stack 3000:80 > /tmp/grafana-forward.log 2>&1 &
         echo "Grafana forwarded to localhost:3000"
     fi
+    # Teams API port-forward
+    if ! pgrep -f "port-forward.*teams-api" > /dev/null; then
+        nohup kubectl port-forward -n teams-api svc/teams-api-service 8000:8000 > /tmp/teams-api-forward.log 2>&1 &
+        echo "Teams API forwarded to localhost:8000"
+    fi
+    # Teams Web UI port-forward
+    if ! pgrep -f "port-forward.*teams-ui" > /dev/null; then
+        nohup kubectl port-forward -n engineering-platform svc/teams-ui-service 4200:80 > /tmp/teams-ui-forward.log 2>&1 &
+        echo "Teams Web UI forwarded to localhost:4200"
+    fi
 fi
 #### Capacitor Auto-Start End ####
 CAPACITOR

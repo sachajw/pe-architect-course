@@ -333,6 +333,16 @@ alias graf-fwd='nohup kubectl port-forward -n monitoring svc/grafana-stack 3000:
 alias graf-stop='pkill -f "port-forward.*grafana"'
 alias graf-status='pgrep -f "port-forward.*grafana" && echo "Grafana forward running" || echo "Grafana forward not running"'
 
+## teams api ##
+alias teams-api-fwd='nohup kubectl port-forward -n teams-api svc/teams-api-service 8000:8000 > /tmp/teams-api-forward.log 2>&1 & echo "Teams API on localhost:8000"'
+alias teams-api-stop='pkill -f "port-forward.*teams-api"'
+alias teams-api-status='pgrep -f "port-forward.*teams-api" && echo "Teams API forward running" || echo "Teams API forward not running"'
+
+## teams ui ##
+alias teams-ui-fwd='nohup kubectl port-forward -n engineering-platform svc/teams-ui-service 4200:80 > /tmp/teams-ui-forward.log 2>&1 & echo "Teams UI on localhost:4200"'
+alias teams-ui-stop='pkill -f "port-forward.*teams-ui"'
+alias teams-ui-status='pgrep -f "port-forward.*teams-ui" && echo "Teams UI forward running" || echo "Teams UI forward not running"'
+
 ## vim ##
 alias vi='vim'
 
