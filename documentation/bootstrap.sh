@@ -121,6 +121,11 @@ if [[ -z "$CAPACITOR_STARTED" && $SHLVL -eq 1 ]]; then
         nohup kubectl port-forward -n engineering-platform svc/teams-ui-service 4200:80 > /tmp/teams-ui-forward.log 2>&1 &
         echo "Teams Web UI forwarded to localhost:4200"
     fi
+    # Keycloak port-forward
+    if ! pgrep -f "port-forward.*keycloak-service" > /dev/null; then
+        nohup kubectl port-forward -n keycloak svc/keycloak-service 8180:8080 > /tmp/keycloak-forward.log 2>&1 &
+        echo "Keycloak forwarded to localhost:8180"
+    fi
 fi
 #### Capacitor Auto-Start End ####
 CAPACITOR

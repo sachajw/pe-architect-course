@@ -343,6 +343,11 @@ alias teams-ui-fwd='nohup kubectl port-forward -n engineering-platform svc/teams
 alias teams-ui-stop='pkill -f "port-forward.*teams-ui"'
 alias teams-ui-status='pgrep -f "port-forward.*teams-ui" && echo "Teams UI forward running" || echo "Teams UI forward not running"'
 
+## keycloak ##
+alias keycloak-fwd='nohup kubectl port-forward -n keycloak svc/keycloak-service 8180:8080 > /tmp/keycloak-forward.log 2>&1 & echo "Keycloak on localhost:8180"'
+alias keycloak-stop='pkill -f "port-forward.*keycloak-service"'
+alias keycloak-status='pgrep -f "port-forward.*keycloak-service" && echo "Keycloak forward running" || echo "Keycloak forward not running"'
+
 ## vim ##
 alias vi='vim'
 

@@ -38,7 +38,7 @@ This document covers the SSH configuration for connecting to your Coder workspac
 | 3001 | 3000 | Grafana |
 | 8000 | 8000 | Teams API |
 | 4200 | 4200 | Teams Web UI |
-| 8080 | 8080 | General Purpose |
+| 8180 | 8180 | Keycloak SSO |
 
 ## Connection Features
 
