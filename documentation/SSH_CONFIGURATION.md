@@ -2,17 +2,28 @@
 
 **Date:** February 19, 2026
 **Environment:** Coder workspace (pangarabbit.coder)
+**Status:** ✅ All features tested and verified
 
 ## Overview
 
 This document covers the SSH configuration for connecting to your Coder workspace with enhanced features like auto-tmux, port forwarding, SOCKS proxy, and connection multiplexing.
+
+## Verified Test Results
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Connection multiplexing | ✅ | Socket active at `~/.ssh/sockets/` |
+| Auto-tmux | ✅ | Session "main" persists |
+| SOCKS proxy | ✅ | Traffic routes through workspace IP |
+| Port forwards | ✅ | 4739, 3000, 8080 active |
+| SSH agent forwarding | ✅ | Git push works without keys |
 
 ## SSH Shortcuts
 
 | Shortcut | Purpose | Features |
 |----------|---------|----------|
 | `ssh pangarabbit.coder` | Full connect | Auto-tmux, port forwards |
-| `ssh cap.pangarabbit` | Capacitor mode | Auto-tmux + Capacitor port |
+| `ssh cap.pangarabbit` | Capacitor mode | Auto-tmux + Capacitor status |
 | `ssh proxy.pangarabbit` | SOCKS proxy | Browse through workspace |
 | `ssh sync.pangarabbit` | File sync | No TTY, for rsync/scp |
 | `ssh zed.pangarabbit` | Zed mode | Auto-tmux (zed session) |
@@ -28,7 +39,7 @@ This document covers the SSH configuration for connecting to your Coder workspac
 
 ## Connection Features
 
-### 1. Connection Multiplexing
+### 1. Connection Multiplexing ✅
 
 Reuses existing SSH connections for instant new terminals:
 
@@ -45,7 +56,7 @@ ssh -O check pangarabbit.coder
 ssh -O exit pangarabbit.coder
 ```
 
-### 2. Auto-Tmux
+### 2. Auto-Tmux ✅
 
 Automatically creates/attaches to a tmux session on connect:
 
@@ -55,7 +66,19 @@ Automatically creates/attaches to a tmux session on connect:
 
 Session persists across disconnects. Reconnect to resume where you left off.
 
-### 3. SSH Agent Forwarding
+**Tmux Quick Keys:**
+| Keys | Action |
+|------|--------|
+| `Ctrl+B` `D` | Detach (keep session running) |
+| `Ctrl+B` `C` | New window |
+| `Ctrl+B` `N` | Next window |
+| `Ctrl+B` `P` | Previous window |
+| `Ctrl+B` `"` | Split horizontal |
+| `Ctrl+B` `%` | Split vertical |
+| `Ctrl+B` `[` | Enter copy mode |
+| `Ctrl+B` `]` | Paste |
+
+### 3. SSH Agent Forwarding ✅
 
 Your local SSH keys are available on the remote for git operations:
 
@@ -64,21 +87,34 @@ Your local SSH keys are available on the remote for git operations:
 git push
 ```
 
-### 4. SOCKS Proxy
+### 4. SOCKS Proxy ✅
 
 Browse the internet through your workspace:
 
 ```bash
-# Start proxy (keep terminal open)
-ssh proxy.pangarabbit
+# Start proxy in background
+ssh -f -N proxy.pangarabbit
+
+# Use with curl
+curl --socks5 localhost:1080 https://ifconfig.me
 
 # Configure browser SOCKS proxy:
 # Host: localhost
 # Port: 1080
 
-# Or use with curl
-curl --socks5 localhost:1080 https://ifconfig.me
+# Stop proxy
+pkill -f "ssh.*proxy.pangarabbit"
 ```
+
+**Verified Results:**
+- Direct IP: `197.89.115.194` (local)
+- Via SOCKS: `35.198.165.220` (workspace)
+
+**Use Cases:**
+- Access internal Kubernetes services from local browser
+- Browse as if you're in the workspace
+- Bypass local network restrictions
+- Test internal endpoints
 
 ### 5. File Sync
 
@@ -90,6 +126,9 @@ rsync -avz ./local-dir/ sync.pangarabbit:/workspaces/pe-coder-aidp/
 
 # Copy file
 scp ./file.txt sync.pangarabbit:/workspaces/persistent/
+
+# Sync persistent storage
+rsync -avz ~/.ccs/ sync.pangarabbit:/workspaces/persistent/.ccs/
 ```
 
 ## SSH Config Structure
@@ -208,20 +247,83 @@ ssh sync.pangarabbit "tmux kill-session -t main"
 ## Quick Reference
 
 ```bash
-# Connect with full features
+# Connect with full features (auto-tmux)
 ssh pangarabbit.coder
 
-# Quick command execution
+# Quick command execution (no tmux)
 ssh sync.pangarabbit "kubectl get pods"
 
 # File transfer
 scp file.txt sync.pangarabbit:/workspaces/persistent/
 
-# SOCKS proxy
-ssh proxy.pangarabbit
+# Start SOCKS proxy in background
+ssh -f -N proxy.pangarabbit
 
 # Check connection status
 ssh -O check pangarabbit.coder
+
+# Kill all sessions to workspace
+pkill -f "ssh.*pangarabbit"
+```
+
+## Usage Examples
+
+### Daily Workflow
+
+```bash
+# Morning: Connect with full features
+ssh pangarabbit.coder
+# → Opens in tmux session "main"
+# → Port forwards active (4739, 3000, 8080)
+
+# Detach but keep session running
+Ctrl+B D
+
+# Later: Reconnect to same session
+ssh pangarabbit.coder
+# → Back where you left off
+```
+
+### Quick Commands
+
+```bash
+# Check Capacitor status
+ssh sync.pangarabbit "cap-status"
+
+# View pods
+ssh sync.pangarabbit "kubectl get pods -A"
+
+# Run bootstrap after restart
+ssh sync.pangarabbit "/workspaces/persistent/bootstrap.sh"
+```
+
+### File Operations
+
+```bash
+# Copy docs to workspace
+scp -r ./documentation sync.pangarabbit:/workspaces/persistent/
+
+# Sync CCS config
+rsync -avz ~/.ccs/shared/ sync.pangarabbit:/workspaces/persistent/.ccs/shared/
+
+# Download logs
+scp sync.pangarabbit:/tmp/capacitor.log ./local-logs/
+```
+
+### Browse Through Workspace
+
+```bash
+# Start SOCKS proxy
+ssh -f -N proxy.pangarabbit
+
+# Access internal service
+curl --socks5 localhost:1080 http://localhost:4739
+
+# Browser: Set SOCKS proxy to localhost:1080
+# Then access: http://localhost:4739 (Capacitor)
+
+# Stop proxy when done
+pkill -f "ssh.*proxy.pangarabbit"
 ```
 
 ---
