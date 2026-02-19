@@ -328,6 +328,11 @@ alias cap-logs='tail -f /tmp/capacitor.log'
 alias cap-restart='cap-stop; sleep 1; cap-start'
 alias cap-bg='nohup next --host 0.0.0.0 --port 4739 --kubeconfig=/root/.kube/config > /tmp/capacitor.log 2>&1 & echo $! > /tmp/capacitor.pid'
 
+## grafana ##
+alias graf-fwd='nohup kubectl port-forward -n monitoring svc/grafana-stack 3000:80 > /tmp/grafana-forward.log 2>&1 & echo "Grafana on localhost:3000"'
+alias graf-stop='pkill -f "port-forward.*grafana"'
+alias graf-status='pgrep -f "port-forward.*grafana" && echo "Grafana forward running" || echo "Grafana forward not running"'
+
 ## vim ##
 alias vi='vim'
 

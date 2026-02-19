@@ -106,6 +106,11 @@ if [[ -z "$CAPACITOR_STARTED" && $SHLVL -eq 1 ]]; then
         echo $! > /tmp/capacitor.pid
         echo "Capacitor started on port 4739"
     fi
+    # Grafana port-forward
+    if ! pgrep -f "port-forward.*grafana" > /dev/null; then
+        nohup kubectl port-forward -n monitoring svc/grafana-stack 3000:80 > /tmp/grafana-forward.log 2>&1 &
+        echo "Grafana forwarded to localhost:3000"
+    fi
 fi
 #### Capacitor Auto-Start End ####
 CAPACITOR
