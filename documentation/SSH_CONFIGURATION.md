@@ -20,13 +20,15 @@ This document covers the SSH configuration for connecting to your Coder workspac
 
 ## SSH Shortcuts
 
-| Shortcut | Purpose | Features |
-|----------|---------|----------|
-| `ssh pangarabbit.coder` | Full connect | Auto-tmux, port forwards |
-| `ssh cap.pangarabbit` | Capacitor mode | Auto-tmux + Capacitor status |
-| `ssh proxy.pangarabbit` | SOCKS proxy | Browse through workspace |
-| `ssh sync.pangarabbit` | File sync | No TTY, for rsync/scp |
-| `ssh zed.pangarabbit` | Zed mode | Auto-tmux (zed session) |
+| Shortcut | Purpose | Auto-tmux | Port Forwards |
+|----------|---------|-----------|---------------|
+| `ssh pangarabbit.coder` | Zed, scripts, general | ❌ No | ✅ Yes |
+| `ssh t.pangarabbit` | Terminal session | ✅ Yes | ✅ Yes |
+| `ssh cap.pangarabbit` | Terminal + Capacitor | ✅ Yes | ✅ Yes |
+| `ssh sync.pangarabbit` | File sync (rsync/scp) | ❌ No | ❌ No |
+| `ssh proxy.pangarabbit` | SOCKS proxy | ❌ No | ❌ No |
+
+> **Note:** `pangarabbit.coder` has NO `RemoteCommand` to work with Zed IDE. Use `t.pangarabbit` for terminal sessions with auto-tmux.
 
 ## Port Forwards
 
@@ -58,13 +60,19 @@ ssh -O exit pangarabbit.coder
 
 ### 2. Auto-Tmux ✅
 
-Automatically creates/attaches to a tmux session on connect:
+Use `t.pangarabbit` for terminal sessions with auto-tmux:
 
-- `pangarabbit.coder` → session "main"
-- `zed.pangarabbit` → session "zed"
-- `cap.pangarabbit` → session "main"
+```bash
+ssh t.pangarabbit  # Creates/attaches to session "main"
+```
 
-Session persists across disconnects. Reconnect to resume where you left off.
+- Session persists across disconnects
+- Reconnect to resume where you left off
+- Use `Ctrl+B D` to detach (session keeps running)
+
+**Why separate shortcuts?**
+- `pangarabbit.coder` - NO auto-tmux (required for Zed, scripts)
+- `t.pangarabbit` - WITH auto-tmux (for interactive terminal)
 
 **Tmux Quick Keys:**
 | Keys | Action |
@@ -148,31 +156,41 @@ Host *
 #### SSH Global Settings End ####
 
 #### Coder Workspaces - Custom Configs ####
+# Main host - NO RemoteCommand (required for Zed)
 Host pangarabbit.coder
     User root
     LocalForward 4739 localhost:4739
     LocalForward 3001 localhost:3000
     LocalForward 8080 localhost:8080
+
+# Terminal with auto-tmux
+Host t.pangarabbit
+    HostName pangarabbit.coder
+    User root
+    LocalForward 4739 localhost:4739
     RequestTTY yes
     RemoteCommand tmux new -A -s main
 
+# SOCKS proxy
 Host proxy.pangarabbit
     HostName pangarabbit.coder
     User root
     DynamicForward 1080
     RequestTTY no
 
+# File sync (no TTY)
 Host sync.pangarabbit
     HostName pangarabbit.coder
     User root
     RequestTTY no
 
-Host zed.pangarabbit
+# Capacitor focus
+Host cap.pangarabbit
     HostName pangarabbit.coder
     User root
     LocalForward 4739 localhost:4739
     RequestTTY yes
-    RemoteCommand tmux new -A -s zed
+    RemoteCommand cap-status && tmux new -A -s main
 #### Coder Workspaces End ####
 ```
 
@@ -298,23 +316,23 @@ ssh-clean
 ## Quick Reference
 
 ```bash
-# Connect with full features (auto-tmux)
+# Zed / scripts / general use (no tmux)
 ssh pangarabbit.coder
 
-# Quick command execution (no tmux)
+# Terminal with auto-tmux
+ssh t.pangarabbit
+
+# Quick command execution
 ssh sync.pangarabbit "kubectl get pods"
 
 # File transfer
 scp file.txt sync.pangarabbit:/workspaces/persistent/
 
-# Start SOCKS proxy in background
+# SOCKS proxy
 ssh -f -N proxy.pangarabbit
 
-# Check connection status
-ssh -O check pangarabbit.coder
-
-# Kill all sessions to workspace
-pkill -f "ssh.*pangarabbit"
+# Clean up stale connections
+ssh-clean
 ```
 
 ## Usage Examples
@@ -322,17 +340,24 @@ pkill -f "ssh.*pangarabbit"
 ### Daily Workflow
 
 ```bash
-# Morning: Connect with full features
-ssh pangarabbit.coder
+# Terminal session with tmux persistence
+ssh t.pangarabbit
 # → Opens in tmux session "main"
-# → Port forwards active (4739, 3000, 8080)
+# → Port forwards active (4739, 3001, 8080)
 
 # Detach but keep session running
 Ctrl+B D
 
 # Later: Reconnect to same session
-ssh pangarabbit.coder
+ssh t.pangarabbit
 # → Back where you left off
+```
+
+### Zed Remote Development
+
+```bash
+# Zed connects to pangarabbit.coder automatically
+# No tmux interference - Zed can run commands freely
 ```
 
 ### Quick Commands
