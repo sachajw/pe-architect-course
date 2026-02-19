@@ -33,7 +33,7 @@ This document covers the SSH configuration for connecting to your Coder workspac
 | Local Port | Remote Port | Service |
 |------------|-------------|---------|
 | 4739 | 4739 | Capacitor Dashboard |
-| 3000 | 3000 | Grafana / General |
+| 3001 | 3000 | Grafana / General |
 | 8080 | 8080 | General Purpose |
 | 8443 | 8443 | HTTPS |
 
@@ -140,7 +140,7 @@ Location: `~/.ssh/config`
 Host *
     ControlMaster auto
     ControlPath ~/.ssh/sockets/%r@%h-%p
-    ControlPersist 600
+    ControlPersist 60
     ServerAliveInterval 60
     ServerAliveCountMax 3
     ForwardAgent yes
@@ -151,7 +151,7 @@ Host *
 Host pangarabbit.coder
     User root
     LocalForward 4739 localhost:4739
-    LocalForward 3000 localhost:3000
+    LocalForward 3001 localhost:3000
     LocalForward 8080 localhost:8080
     RequestTTY yes
     RemoteCommand tmux new -A -s main
@@ -174,6 +174,28 @@ Host zed.pangarabbit
     RequestTTY yes
     RemoteCommand tmux new -A -s zed
 #### Coder Workspaces End ####
+```
+
+**Key Settings Explained:**
+
+| Setting | Value | Purpose |
+|---------|-------|---------|
+| `ControlPersist` | 60 | Auto-close background connections after 60s |
+| `ServerAliveInterval` | 60 | Send keepalive every 60 seconds |
+| `ServerAliveCountMax` | 3 | Disconnect after 3 missed keepalives |
+
+## Local Cleanup Alias
+
+Add to your local `~/.zshrc`:
+
+```bash
+# SSH cleanup alias
+alias ssh-clean='pkill -f "ssh.*coder" 2>/dev/null; rm -f ~/.ssh/sockets/* 2>/dev/null; echo "SSH sockets cleaned"'
+```
+
+Usage:
+```bash
+ssh-clean    # Cleans stale sockets and kills hanging connections
 ```
 
 ## Zed Remote Development
@@ -207,6 +229,29 @@ While connected, use these sequences (press Enter first):
 
 ## Troubleshooting
 
+### Stale Socket / Port Already in Use
+
+**Symptoms:**
+```
+mux_client_forward: forwarding request failed: Port forwarding failed
+bind [127.0.0.1]:4739: Address already in use
+ControlSocket already exists, disabling multiplexing
+```
+
+**Quick Fix:**
+```bash
+# Clean up stale connections and sockets
+ssh-clean
+
+# Or manually:
+pkill -f "ssh.*coder"
+rm -f ~/.ssh/sockets/*
+```
+
+**Prevention:**
+- `ControlPersist 60` - Auto-closes background connections after 60s
+- Always use `Ctrl+B D` (tmux detach) or `~.` (SSH escape) to disconnect properly
+
 ### Connection Refused
 
 ```bash
@@ -217,7 +262,7 @@ coder list
 coder start pangarabbit
 ```
 
-### Port Already in Use
+### Port Already in Use (Non-SSH)
 
 ```bash
 # Find what's using the port
@@ -225,13 +270,6 @@ lsof -i :4739
 
 # Kill the process
 kill <PID>
-```
-
-### Stale Socket
-
-```bash
-# Remove stale socket
-rm ~/.ssh/sockets/root@pangarabbit.coder-22
 ```
 
 ### Tmux Session Issues
@@ -242,6 +280,19 @@ ssh sync.pangarabbit "tmux list-sessions"
 
 # Kill session
 ssh sync.pangarabbit "tmux kill-session -t main"
+```
+
+### Multiplexing Commands
+
+```bash
+# Check active connection
+ssh -O check pangarabbit.coder
+
+# Gracefully close background connection
+ssh -O exit pangarabbit.coder
+
+# Force cleanup
+ssh-clean
 ```
 
 ## Quick Reference
