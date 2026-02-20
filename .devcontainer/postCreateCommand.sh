@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -e  # Exit on any error
 
 # Define a sudo wrapper
 run_as_root() {
@@ -239,8 +240,8 @@ fi
 ### Export needed env-vars for terraform
 # Variables for TLS in Terraform
 # export TF_VAR_tls_ca_cert=$TLS_CA_CERT
-export TF_VAR_tls_cert_string=$PIDP_CERT
-export TF_VAR_tls_key_string=$PIDP_KEY
+export TF_VAR_tls_cert_string="${PIDP_CERT:-}"
+export TF_VAR_tls_key_string="${PIDP_KEY:-}"
 # Kubeconfig for Terraform
 export TF_VAR_kubeconfig=$kubeconfig_docker
 
