@@ -12,6 +12,22 @@ run_as_root() {
 
 run_as_root apt-get install -y curl unzip wget net-tools jq
 
+# Install Node.js and npm (required for devcontainer CLI)
+if ! command -v node > /dev/null 2>&1; then
+  echo "Node.js not found. Installing..."
+  run_as_root apt-get install -y nodejs npm
+else
+  echo "Node.js is already installed."
+fi
+
+# Install DevContainer CLI
+if ! command -v devcontainer > /dev/null 2>&1; then
+  echo "DevContainer CLI not found. Installing..."
+  run_as_root npm install -g @devcontainers/cli
+else
+  echo "DevContainer CLI is already installed."
+fi
+
 # Make certificates happen :)
 if ! command -v mkcert &> /dev/null
 then
@@ -32,6 +48,10 @@ then
   run_as_root dockerd > /dev/null 2>&1 &
 else
   echo "Docker daemon is already running."
+
+# Fix envbuilder PATH issue for Coder devcontainer detection
+run_as_root ln -sf /.envbuilder/bin/envbuilder /usr/local/bin/envbuilder 2>/dev/null || true
+
 fi
 
 # For Terraform 1.5.7
@@ -311,3 +331,176 @@ echo "alias sk='score-k8s'" >> $HOME/.bashrc
 
 echo ""
 echo ">>>> ready to roll."
+
+# Install Starship prompt
+echo "Installing Starship..."
+curl -sS https://starship.rs/install.sh | sh -s -- -y
+
+# Install Flux CLI
+echo "Installing Flux CLI..."
+curl -s https://fluxcd.io/install.sh | bash
+
+# Install Capacitor (Next)
+echo "Installing Capacitor (Next)..."
+wget -qO- https://gimlet.io/install-capacitor | bash
+
+# Create Starship config directory and config file
+echo "Configuring Starship..."
+mkdir -p ~/.config
+
+cat > ~/.config/starship.toml << 'STARSHIP_EOF'
+# Starship Configuration
+format = """
+$username\
+$hostname\
+$kubernetes\
+$docker_context\
+$directory\
+$git_branch\
+$git_status\
+$golang\
+$nodejs\
+$python\
+$terraform\
+$jobs\
+$cmd_duration\
+$line_break\
+$character"""
+
+right_format = """$time$battery$status$shell"""
+
+scan_timeout = 100
+command_timeout = 3000
+follow_symlinks = false
+
+[palettes.foo]
+blue = '21'
+mustard = '#af8700'
+
+[username]
+show_always = true
+format = '[$user]($style) '
+style_user = "fg:#F47A26"
+style_root = "fg:#F47A26"
+
+[hostname]
+ssh_only = false
+format = "[@$hostname]($style) "
+style = "fg:#F47A26 bold"
+
+[directory]
+truncation_length = 3
+truncate_to_repo = true
+format = "[$path]($style)[$read_only]($read_only_style) "
+style = "bg:none fg:#F47A26 bold"
+home_symbol = "~"
+truncation_symbol = "…/"
+
+[git_branch]
+format = '[$symbol$branch]($style) '
+symbol = ""
+style = "bold purple"
+truncation_length = 18
+
+[git_status]
+format = '([\[$all_status$ahead_behind\]]($style))'
+conflicted = "!"
+ahead = "↑${count}"
+diverged = "↕${ahead_count}↓${behind_count}"
+behind = "↓${count}"
+up_to_date = "✓"
+untracked = "?${count}"
+stashed = "*${count}"
+modified = "~${count}"
+staged = '+${count}'
+renamed = "→${count}"
+deleted = "✗${count}"
+style = "bold red"
+
+[kubernetes]
+symbol = "⎈ "
+format = '[$symbol$context( @$namespace)]($style) '
+style = "cyan bold"
+disabled = false
+detect_files = ['k8s', 'kubernetes']
+detect_folders = ['.kube']
+
+[[kubernetes.contexts]]
+context_pattern = ".*pangarabbit.*"
+context_alias = "pgr"
+style = "bold cyan"
+
+[[kubernetes.contexts]]
+context_pattern = ".*infra.*"
+context_alias = "dev"
+style = "bold green"
+
+[[kubernetes.contexts]]
+context_pattern = ".*nonprod.*"
+context_alias = "test"
+style = "bold yellow"
+
+[[kubernetes.contexts]]
+context_pattern = ".*prod.*"
+context_alias = "prod"
+style = "bold red"
+
+[docker_context]
+format = "[$symbol$context]($style) "
+symbol = "🐳 "
+only_with_files = true
+detect_files = ["docker-compose.yml", "docker-compose.yaml", "Dockerfile"]
+style = "blue bold"
+
+[cmd_duration]
+min_time = 5_000
+format = "⏱ [$duration]($style) "
+style = "bold yellow"
+
+[character]
+success_symbol = "[➜](bold green) "
+error_symbol = "[✗](bold red) "
+vicmd_symbol = "[←](bold green)"
+
+[golang]
+format = "[$symbol($version )]($style)"
+symbol = "🐹 "
+
+[nodejs]
+format = "[$symbol($version )]($style)"
+symbol = "⬢ "
+
+[python]
+format = "[$symbol($version )]($style)"
+symbol = "🐍 "
+
+[terraform]
+format = '[$symbol$workspace]($style) '
+symbol = "TF:"
+detect_folders = [".terraform"]
+style = "bold_105"
+
+[time]
+disabled = false
+format = "🕙[$time]($style) "
+time_format = "%H:%M"
+style = "bold white"
+
+[battery]
+disabled = true
+
+[status]
+disabled = true
+
+[shell]
+disabled = true
+STARSHIP_EOF
+
+# Configure zsh with Starship
+echo "Configuring zsh..."
+grep -q "starship init zsh" ~/.zshrc || echo 'eval "$(starship init zsh)"' >> ~/.zshrc
+
+# Set zsh as default shell
+chsh -s $(which zsh)
+
+echo ">>>> Starship, Flux, and Capacitor installed and configured"
