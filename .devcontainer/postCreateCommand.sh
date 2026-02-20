@@ -12,6 +12,22 @@ run_as_root() {
 
 run_as_root apt-get install -y curl unzip wget net-tools jq
 
+# Install Node.js and npm (required for devcontainer CLI)
+if ! command -v node > /dev/null 2>&1; then
+  echo "Node.js not found. Installing..."
+  run_as_root apt-get install -y nodejs npm
+else
+  echo "Node.js is already installed."
+fi
+
+# Install DevContainer CLI
+if ! command -v devcontainer > /dev/null 2>&1; then
+  echo "DevContainer CLI not found. Installing..."
+  run_as_root npm install -g @devcontainers/cli
+else
+  echo "DevContainer CLI is already installed."
+fi
+
 # Make certificates happen :)
 if ! command -v mkcert &> /dev/null
 then
