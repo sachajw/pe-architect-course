@@ -5,6 +5,7 @@ Welcome to the Security Operations (SecOps) module! This hands-on exercise teach
 ## 🎯 Learning Objectives
 
 By completing this module, you will:
+
 - Deploy **Falco runtime security monitoring** for real-time threat detection
 - Implement **custom security rules** tailored to your environment
 - Create **security constraints with OPA Gatekeeper** for preventive controls
@@ -14,11 +15,13 @@ By completing this module, you will:
 ## 📋 Prerequisites
 
 **Required**:
+
 - [Foundation module](../foundation/README.md) completed
 - Kubernetes cluster with sufficient permissions
 - **Optional**: [CapOc modules](../capoc/README.md) for better policy context
 
 **Verify Setup**:
+
 ```bash
 # Verify Kubernetes cluster is ready
 kubectl cluster-info
@@ -42,14 +45,17 @@ In this module, you'll create a comprehensive security monitoring setup:
 ## 📚 Understanding Runtime Security
 
 ### What is Falco?
+
 Falco is a runtime security monitoring tool that uses system calls to detect anomalous activity and potential security threats in real-time. It's a graduated CNCF project trusted by organizations worldwide.
 
 ### Runtime vs. Admission-Time Security
+
 - **Admission-Time** (Gatekeeper): Prevents bad things from being deployed
 - **Runtime** (Falco): Detects bad things that are happening while running
 - **Together**: Complete security coverage across the deployment lifecycle
 
 ### Why Runtime Monitoring Matters
+
 - **Zero-Day Protection**: Detect unknown threats based on behavior
 - **Insider Threats**: Monitor for malicious activities by authenticated users
 - **Compliance**: Meet regulatory requirements for security monitoring
@@ -77,6 +83,7 @@ helm install falco falcosecurity/falco \
 ```
 
 **Verify Falco Installation**:
+
 ```bash
 # Check that Falco pods are running
 kubectl get pods -n falco-system
@@ -90,6 +97,7 @@ kubectl logs -n falco-system daemonset/falco | head -20
 ```
 
 **What this deployment includes**:
+
 - **eBPF Driver**: Modern, efficient kernel monitoring
 - **gRPC Output**: Enable integrations with external systems
 - **Default Rules**: Pre-configured security detection rules
@@ -110,6 +118,7 @@ kubectl run test-privileged \
 ```
 
 **Check for security alerts**:
+
 ```bash
 # Exit the privileged container (type 'exit') then check logs
 kubectl logs -n falco-system daemonset/falco | grep "Privileged container"
@@ -131,6 +140,7 @@ helm upgrade falco falcosecurity/falco \
 ```
 
 **Verify custom rules are loaded**:
+
 ```bash
 # Check Falco logs for rule loading
 kubectl logs -n falco-system daemonset/falco | grep -i "rules"
@@ -140,6 +150,7 @@ kubectl logs -n falco-system daemonset/falco | grep -i "rules"
 
 **Understanding the custom rule**:
 The `root-detect-rule.yaml` contains rules for detecting:
+
 - Root user executions in containers
 - Suspicious file access patterns
 - Network connections from containers
@@ -155,6 +166,7 @@ kubectl apply -f constraint-template.yaml
 ```
 
 **Verify the template**:
+
 ```bash
 # Check that security template is created
 kubectl get constrainttemplates | grep -i falco
@@ -163,6 +175,7 @@ kubectl get constrainttemplates | grep -i falco
 ```
 
 **What this template does**:
+
 - Prevents deployment of privileged containers
 - Requires security contexts for all containers
 - Blocks containers running as root
@@ -178,6 +191,7 @@ kubectl apply -f constraint.yaml
 ```
 
 **Verify constraint is enforcing**:
+
 ```bash
 # Check that constraint exists and is active
 kubectl get constraints | grep -i falco
@@ -189,6 +203,7 @@ kubectl describe constraint
 ### Step 6: Test Security Detection and Prevention
 
 **Test 1: Runtime Detection (Falco)**
+
 ```bash
 # This will be detected by Falco but allowed by Kubernetes
 kubectl run test-curl \
@@ -207,6 +222,7 @@ kubectl logs -n falco-system daemonset/falco | tail -20
 ```
 
 **Test 2: Admission Prevention (Gatekeeper)**
+
 ```bash
 # This should FAIL - blocked by security constraint
 kubectl apply -f deployment.yaml
@@ -215,6 +231,7 @@ kubectl apply -f deployment.yaml
 ```
 
 **Test 3: Compliant Deployment**
+
 ```bash
 # This should SUCCEED - meets security requirements
 kubectl apply -f deployment-works.yaml
@@ -228,6 +245,7 @@ kubectl get deployment secure-nonroot-app
 ### Confirm Complete Security Setup
 
 **1. Falco Runtime Monitoring**:
+
 ```bash
 # Verify Falco is running and monitoring
 kubectl get pods -n falco-system
@@ -241,6 +259,7 @@ kubectl logs -n falco-system daemonset/falco | grep "custom_rules"
 ```
 
 **2. Security Constraints**:
+
 ```bash
 # Verify security constraint template exists
 kubectl get constrainttemplates | grep -i falco
@@ -254,6 +273,7 @@ kubectl apply -f deployment.yaml
 ```
 
 **3. End-to-End Security Testing**:
+
 ```bash
 # Test runtime detection
 kubectl run security-test --image=busybox --rm -it -- sh
@@ -273,6 +293,7 @@ kubectl get deployment secure-nonroot-app
 ### Success Criteria ✅
 
 Your security operations setup is working when:
+
 - [ ] Falco pods are running on all nodes
 - [ ] Falco generates alerts for suspicious activities
 - [ ] Custom security rules are loaded and active
@@ -308,12 +329,12 @@ Extend security policies with additional requirements:
 ```yaml
 # Example additional security parameters
 parameters:
-  allowPrivileged: false           # No privileged containers
-  allowHostNetwork: false          # No host networking
-  allowHostPID: false             # No host PID namespace
-  requiredSecurityContext: true   # Must have security context
-  allowedCapabilities: []         # No additional capabilities
-  forbiddenSyscalls: ["mount", "umount"]  # Block dangerous syscalls
+  allowPrivileged: false # No privileged containers
+  allowHostNetwork: false # No host networking
+  allowHostPID: false # No host PID namespace
+  requiredSecurityContext: true # Must have security context
+  allowedCapabilities: [] # No additional capabilities
+  forbiddenSyscalls: ["mount", "umount"] # Block dangerous syscalls
 ```
 
 ### Falco Output Integration
@@ -337,9 +358,11 @@ falco:
 ### Common Issues and Solutions
 
 #### 1. Falco Pods Not Starting
+
 **Symptoms**: Pods stuck in `Pending` or `CrashLoopBackOff`
 
 **Diagnosis**:
+
 ```bash
 # Check pod status and events
 kubectl describe pod -n falco-system <falco-pod-name>
@@ -352,6 +375,7 @@ kubectl logs -n falco-system <falco-pod-name> | grep -i ebpf
 ```
 
 **Solutions**:
+
 ```bash
 # Try without eBPF driver if not supported
 helm upgrade falco falcosecurity/falco \
@@ -365,9 +389,11 @@ helm upgrade falco falcosecurity/falco \
 ```
 
 #### 2. No Security Alerts Generated
+
 **Symptoms**: Falco running but no alerts appear
 
 **Diagnosis**:
+
 ```bash
 # Check Falco configuration
 kubectl logs -n falco-system daemonset/falco | grep -i "rules loaded"
@@ -377,6 +403,7 @@ kubectl run test-root --image=busybox --overrides='{"spec":{"securityContext":{"
 ```
 
 **Solutions**:
+
 ```bash
 # Verify log output format
 kubectl logs -n falco-system daemonset/falco --tail=50
@@ -386,9 +413,11 @@ kubectl describe configmap -n falco-system falco
 ```
 
 #### 3. Security Constraints Not Enforcing
+
 **Symptoms**: Insecure deployments are allowed
 
 **Diagnosis**:
+
 ```bash
 # Check Gatekeeper status
 kubectl get pods -n gatekeeper-system
@@ -401,6 +430,7 @@ kubectl describe constraint <constraint-name>
 ```
 
 **Solutions**:
+
 ```bash
 # Restart Gatekeeper if needed
 kubectl rollout restart deployment -n gatekeeper-system gatekeeper-controller-manager
@@ -410,9 +440,11 @@ kubectl apply -f security-constraint-template.yaml
 ```
 
 #### 4. High Resource Usage
+
 **Symptoms**: Falco consuming excessive CPU/memory
 
 **Diagnosis**:
+
 ```bash
 # Check resource usage
 kubectl top pods -n falco-system
@@ -422,6 +454,7 @@ kubectl get configmap -n falco-system falco -o yaml
 ```
 
 **Solutions**:
+
 ```bash
 # Reduce rule complexity or frequency
 helm upgrade falco falcosecurity/falco \
@@ -433,6 +466,7 @@ helm upgrade falco falcosecurity/falco \
 ### Performance Optimization
 
 For production deployments:
+
 ```bash
 # Optimize Falco for production
 helm upgrade falco falcosecurity/falco \
@@ -448,17 +482,21 @@ helm upgrade falco falcosecurity/falco \
 ## 🎯 Next Steps
 
 ### Option 1: Advanced Security Features
+
 - **Alert Integration**: Connect Falco to Slack, PagerDuty, or SIEM
 - **Custom Rules**: Develop organization-specific detection rules
 - **Response Automation**: Automatically respond to security events
 
 ### Option 2: Complete Platform Experience
+
 Continue with [Teams Management](../teams-management/) module:
+
 - Build APIs for managing engineering teams
 - Create developer-friendly CLI tools
 - Deploy full-stack team management UI
 
 ### Option 3: Security Hardening
+
 - Implement network policies for microsegmentation
 - Add image vulnerability scanning automation
 - Set up security compliance reporting
@@ -474,6 +512,7 @@ You've successfully implemented a comprehensive security operations platform! Yo
 ✅ **Production-Ready Monitoring** with alerting and logging capabilities
 
 ### What You've Achieved
+
 - **Threat Detection**: Real-time monitoring for security violations
 - **Preventive Controls**: Block insecure configurations before deployment
 - **Compliance**: Meet security monitoring and alerting requirements
