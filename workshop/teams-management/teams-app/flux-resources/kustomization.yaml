@@ -4,6 +4,7 @@ namespace: engineering-platform
 resources:
   - namespace.yaml
   - teams-api-alias.yaml
+  - configmap.yaml
   - deployment.yaml
   - service.yaml
   - ingress.yaml
