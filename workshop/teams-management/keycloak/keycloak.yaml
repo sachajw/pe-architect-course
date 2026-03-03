@@ -186,13 +186,11 @@ data:
           "enabled": true,
           "clientAuthenticatorType": "client-secret",
           "redirectUris": [
-            "http://platform-auth.127.0.0.1.sslip.io/*",
             "http://teams-ui.127.0.0.1.sslip.io/*",
             "http://teams-ui.127.0.0.1.sslip.io:8888/*",
             "http://localhost:4200/*"
           ],
           "webOrigins": [
-            "http://platform-auth.127.0.0.1.sslip.io",
             "http://teams-ui.127.0.0.1.sslip.io",
             "http://teams-ui.127.0.0.1.sslip.io:8888",
             "http://localhost:4200"
@@ -200,7 +198,7 @@ data:
           "publicClient": true,
           "protocol": "openid-connect",
           "attributes": {
-            "post.logout.redirect.uris": "http://platform-auth.127.0.0.1.sslip.io/*##http://localhost:4200/*##http://teams-ui.127.0.0.1.sslip.io:8888/*"
+            "post.logout.redirect.uris": "http://teams-ui.127.0.0.1.sslip.io/*##http://teams-ui.127.0.0.1.sslip.io:8888/*##http://localhost:4200/*"
           }
         }
       ],
