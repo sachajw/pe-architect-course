@@ -11,8 +11,9 @@ data:
         root /usr/share/nginx/html;
         index index.html;
 
-        # Rewrite hardcoded API URL to include port 8888 (SSH tunnel port)
+        # Rewrite hardcoded URLs to include port 8888 (SSH tunnel port)
         sub_filter "http://teams-api.127.0.0.1.sslip.io" "http://teams-api.127.0.0.1.sslip.io:8888";
+        sub_filter "http://platform-auth.127.0.0.1.sslip.io" "http://platform-auth.127.0.0.1.sslip.io:8888";
         sub_filter_once off;
         sub_filter_types application/javascript;
 
