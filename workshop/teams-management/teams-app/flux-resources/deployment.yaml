@@ -23,7 +23,7 @@ spec:
         - containerPort: 80
         env:
         - name: API_URL
-          value: "http://teams-api-service.teams-api.svc.cluster.local:8000"
+          value: "http://teams-api.127.0.0.1.sslip.io"
         resources:
           requests:
             memory: "64Mi"
