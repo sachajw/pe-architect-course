@@ -92,8 +92,8 @@ spec:
           value: keycloak
         - name: KC_DB_PASSWORD
           value: keycloak
-        - name: KC_HOSTNAME
-          value: platform-auth.127.0.0.1.sslip.io
+        - name: KC_HOSTNAME_URL
+          value: "http://platform-auth.127.0.0.1.sslip.io:8888"
         - name: KC_HOSTNAME_STRICT
           value: "false"
         - name: KC_HTTP_ENABLED
@@ -201,17 +201,19 @@ data:
           "redirectUris": [
             "http://platform-auth.127.0.0.1.sslip.io/*",
             "http://teams-ui.127.0.0.1.sslip.io/*",
+            "http://teams-ui.127.0.0.1.sslip.io:8888/*",
             "http://localhost:4200/*"
           ],
           "webOrigins": [
             "http://platform-auth.127.0.0.1.sslip.io",
             "http://teams-ui.127.0.0.1.sslip.io",
+            "http://teams-ui.127.0.0.1.sslip.io:8888",
             "http://localhost:4200"
           ],
           "publicClient": true,
           "protocol": "openid-connect",
           "attributes": {
-            "post.logout.redirect.uris": "http://platform-auth.127.0.0.1.sslip.io/*##http://localhost:4200/*"
+            "post.logout.redirect.uris": "http://platform-auth.127.0.0.1.sslip.io/*##http://localhost:4200/*##http://teams-ui.127.0.0.1.sslip.io:8888/*"
           }
         }
       ],
