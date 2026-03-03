@@ -46,13 +46,21 @@ if ! pgrep -x "dockerd" > /dev/null
 then
   echo "Docker daemon is not running. Starting dockerd in the background..."
   run_as_root dockerd > /dev/null 2>&1 &
+  # Wait for Docker daemon to be ready
+  echo "Waiting for Docker daemon to be ready..."
+  for i in {1..30}; do
+    if docker info > /dev/null 2>&1; then
+      echo "Docker daemon is ready!"
+      break
+    fi
+    sleep 1
+  done
 else
   echo "Docker daemon is already running."
+fi
 
 # Fix envbuilder PATH issue for Coder devcontainer detection
 run_as_root ln -sf /.envbuilder/bin/envbuilder /usr/local/bin/envbuilder 2>/dev/null || true
-
-fi
 
 # For Terraform 1.5.7
 ARCH=$(uname -m)
@@ -96,7 +104,7 @@ then
   # For score-k8s ARM64
   [ $(uname -m) = aarch64 ] && curl -sLO "https://github.com/score-spec/score-k8s/releases/download/0.1.18/score-k8s_0.1.18_linux_arm64.tar.gz"
   tar xvzf score-k8s*.tar.gz
-  rm score-k8s*.tar.gz README.md LICENSE
+  rm -f score-k8s*.tar.gz README.md LICENSE 2>/dev/null || true
   run_as_root mv ./score-k8s /usr/local/bin/score-k8s
   run_as_root chown root: /usr/local/bin/score-k8s
 else
@@ -177,7 +185,7 @@ echo "complete -F __start_kubectl k" >> $HOME/.bashrc
 
 # Check if the network already exists and create it if it does not
 if ! docker network ls | grep -q 'kind'; then
-  docker network create -d=bridge -o com.docker.network.bridge.enable_ip_masquerade=true -o com.docker.network.driver.mtu=1500 --subnet fc00:f853:ccd:e793::/64 kind
+  docker network create -d=bridge -o com.docker.network.bridge.enable_ip_masquerade=true -o com.docker.network.driver.mtu=1500 --subnet fc00:f853:ccd:e793::/64 kind || echo "Warning: Could not create kind network (may already exist)"
 else
   echo "Network 'kind' already exists."
 fi
@@ -189,25 +197,25 @@ mkdir -p $BASE_DIR/state/kube
 reg_name='kind-registry'
 reg_port='5001'
 if [ "$(docker inspect -f '{{.State.Running}}' "${reg_name}" 2>/dev/null || true)" != 'true' ]; then
-  docker run -d --restart=always -p "127.0.0.1:${reg_port}:5000" --network bridge --name "${reg_name}" registry:2
+  docker run -d --restart=always -p "127.0.0.1:${reg_port}:5000" --network bridge --name "${reg_name}" registry:2 || echo "Warning: Could not create kind-registry container"
 fi
 
 # 2. Create Kind cluster
 if [ ! -f $BASE_DIR/state/kube/config.yaml ]; then
-  kind create cluster -n 5min-idp --kubeconfig $BASE_DIR/state/kube/config.yaml --config ./setup/kind/cluster.yaml
+  kind create cluster -n 5min-idp --kubeconfig $BASE_DIR/state/kube/config.yaml --config ./setup/kind/cluster.yaml || echo "Warning: Kind cluster creation failed"
 fi
 
 # connect current container to the kind network
 container_name="5min-idp"
-if [ "$(docker inspect -f='{{json .NetworkSettings.Networks.kind}}' "${container_name}")" = 'null' ]; then
-  docker network connect "kind" "${container_name}"
+if [ "$(docker inspect -f='{{json .NetworkSettings.Networks.kind}}' "${container_name}" 2>/dev/null)" = 'null' ]; then
+  docker network connect "kind" "${container_name}" 2>/dev/null || echo "Warning: Could not connect container to kind network"
 fi
 
 # used by humanitec-agent / inside docker to reach the cluster
 export kubeconfig_docker=$BASE_DIR/state/kube/config-internal.yaml
-kind export kubeconfig --internal -n 5min-idp --kubeconfig "$kubeconfig_docker"
+kind export kubeconfig --internal -n 5min-idp --kubeconfig "$kubeconfig_docker" 2>/dev/null || echo "Warning: Could not export internal kubeconfig"
 # used in general
-kind export kubeconfig --internal -n 5min-idp
+kind export kubeconfig --internal -n 5min-idp 2>/dev/null || echo "Warning: Could not export kubeconfig"
 
 # 3. Add the registry config to the nodes
 #
@@ -227,13 +235,13 @@ done
 
 # 4. Connect the registry to the cluster network if not already connected
 # This allows kind to bootstrap the network but ensures they're on the same network
-if [ "$(docker inspect -f='{{json .NetworkSettings.Networks.kind}}' "${reg_name}")" = 'null' ]; then
-  docker network connect "kind" "${reg_name}"
+if [ "$(docker inspect -f='{{json .NetworkSettings.Networks.kind}}' "${reg_name}" 2>/dev/null)" = 'null' ]; then
+  docker network connect "kind" "${reg_name}" 2>/dev/null || echo "Warning: Could not connect registry to kind network"
 fi
 
 # 5. Document the local registry
 # https://github.com/kubernetes/enhancements/tree/master/keps/sig-cluster-lifecycle/generic/1755-communicating-a-local-registry
-cat <<EOF | kubectl apply -f -
+cat <<EOF | kubectl apply -f - 2>/dev/null || echo "Warning: Could not apply local-registry-hosting configmap"
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -265,8 +273,8 @@ export TF_VAR_tls_key_string="${PIDP_KEY:-}"
 # Kubeconfig for Terraform
 export TF_VAR_kubeconfig=$kubeconfig_docker
 
-terraform -chdir=setup/terraform init
-terraform -chdir=setup/terraform apply -auto-approve
+terraform -chdir=setup/terraform init || echo "Warning: Terraform init failed"
+terraform -chdir=setup/terraform apply -auto-approve || echo "Warning: Terraform apply failed"
 
 # # Check if the gitea_runner container is already running
 # if [ "$(docker inspect -f '{{.State.Running}}' gitea_runner 2>/dev/null || true)" != 'true' ]; then
@@ -500,7 +508,7 @@ STARSHIP_EOF
 echo "Configuring zsh..."
 grep -q "starship init zsh" ~/.zshrc || echo 'eval "$(starship init zsh)"' >> ~/.zshrc
 
-# Set zsh as default shell
-chsh -s $(which zsh)
+# Set zsh as default shell (non-blocking, may fail in non-interactive environments)
+chsh -s $(which zsh) 2>/dev/null || echo "Note: Could not change default shell to zsh (non-critical)"
 
 echo ">>>> Starship, Flux, and Capacitor installed and configured"
