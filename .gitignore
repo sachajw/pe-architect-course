@@ -223,3 +223,6 @@ $RECYCLE.BIN/
 *.lnk
 
 # End of https://www.toptal.com/developers/gitignore/api/macos,windows,visualstudiocode,jetbrains+all,terraform,cmake
+# Sensitive CCS config files
+documentation/ccs-config/shared/master-config.json
+documentation/ccs-config/shared/settings.json

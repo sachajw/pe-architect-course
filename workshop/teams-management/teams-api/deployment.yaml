@@ -1,11 +1,23 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: teams-api-data
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: teams-api
+  namespace: teams-api
   labels:
     app: teams-api
   annotations:
-    commit-sha: 8b514a1cb354
+    commit-sha: "8b514a1cb354"
 spec:
   replicas: 1
   selector:
@@ -23,6 +35,13 @@ spec:
         fsGroup: 1001
         seccompProfile:
           type: RuntimeDefault
+      initContainers:
+      - name: install-deps
+        image: python:3.11-slim
+        command: ['sh', '-c', 'pip install aiosqlite==0.19.0 --target /app-deps']
+        volumeMounts:
+        - name: deps
+          mountPath: /app-deps
       containers:
       - name: teams-api
         image: olivercodes01/teams-api:0.0.2
@@ -31,12 +50,26 @@ spec:
         env:
         - name: PORT
           value: "8000"
+        - name: DATABASE_PATH
+          value: "/data/teams.db"
+        - name: PYTHONPATH
+          value: "/app:/app-deps"
+        command: ["python", "/app-override/main.py"]
+        volumeMounts:
+        - name: data
+          mountPath: /data
+        - name: app-override
+          mountPath: /app-override
+          readOnly: true
+        - name: deps
+          mountPath: /app-deps
+          readOnly: true
         securityContext:
           runAsNonRoot: true
           runAsUser: 1001
           runAsGroup: 1001
           allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: false
+          readOnlyRootFilesystem: true
           capabilities:
             drop:
             - ALL
@@ -59,19 +92,29 @@ spec:
           httpGet:
             path: /health
             port: 8000
-          initialDelaySeconds: 5
+          initialDelaySeconds: 10
           periodSeconds: 5
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: teams-api-data
+      - name: app-override
+        configMap:
+          name: teams-api-code
+      - name: deps
+        emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: teams-api-service
+  namespace: teams-api
 spec:
   selector:
     app: teams-api
   ports:
     - protocol: TCP
-      port: 4200
+      port: 8000
       targetPort: 8000
   type: ClusterIP
 ---
@@ -79,13 +122,14 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: teams-api-ingress
+  namespace: teams-api
   annotations:
-    traefik.ingress.kubernetes.io/router.entrypoints: web
-    traefik.ingress.kubernetes.io/headers.accesscontrolallowmethods: GET,POST,PUT,DELETE,OPTIONS
-    traefik.ingress.kubernetes.io/headers.accesscontrolalloworigin: "*"
-    traefik.ingress.kubernetes.io/headers.accesscontrolallowheaders: Content-Type,Authorization,X-Requested-With
-    kubernetes.io/ingress.class: traefik
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "Content-Type, Authorization, X-Requested-With"
 spec:
+  ingressClassName: nginx
   rules:
   - host: teams-api.127.0.0.1.sslip.io
     http:
@@ -96,4 +140,4 @@ spec:
           service:
             name: teams-api-service
             port:
-              number: 4200
+              number: 8000

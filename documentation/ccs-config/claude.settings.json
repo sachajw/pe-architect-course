@@ -1,0 +1,26 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "WebSearch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"/Users/tvl/.ccs/hooks/websearch-transformer.cjs\"",
+            "timeout": 120
+          }
+        ]
+      },
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"/Users/tvl/.ccs/hooks/image-analyzer-transformer.cjs\"",
+            "timeout": 65000
+          }
+        ]
+      }
+    ]
+  }
+}

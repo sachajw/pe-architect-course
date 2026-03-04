@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -e  # Exit on any error
 
 # Define a sudo wrapper
 run_as_root() {
@@ -10,6 +11,22 @@ run_as_root() {
 }
 
 run_as_root apt-get install -y curl unzip wget net-tools jq
+
+# Install Node.js and npm (required for devcontainer CLI)
+if ! command -v node > /dev/null 2>&1; then
+  echo "Node.js not found. Installing..."
+  run_as_root apt-get install -y nodejs npm
+else
+  echo "Node.js is already installed."
+fi
+
+# Install DevContainer CLI
+if ! command -v devcontainer > /dev/null 2>&1; then
+  echo "DevContainer CLI not found. Installing..."
+  run_as_root npm install -g @devcontainers/cli
+else
+  echo "DevContainer CLI is already installed."
+fi
 
 # Make certificates happen :)
 if ! command -v mkcert &> /dev/null
@@ -29,9 +46,21 @@ if ! pgrep -x "dockerd" > /dev/null
 then
   echo "Docker daemon is not running. Starting dockerd in the background..."
   run_as_root dockerd > /dev/null 2>&1 &
+  # Wait for Docker daemon to be ready
+  echo "Waiting for Docker daemon to be ready..."
+  for i in {1..30}; do
+    if docker info > /dev/null 2>&1; then
+      echo "Docker daemon is ready!"
+      break
+    fi
+    sleep 1
+  done
 else
   echo "Docker daemon is already running."
 fi
+
+# Fix envbuilder PATH issue for Coder devcontainer detection
+run_as_root ln -sf /.envbuilder/bin/envbuilder /usr/local/bin/envbuilder 2>/dev/null || true
 
 # For Terraform 1.5.7
 ARCH=$(uname -m)
@@ -75,7 +104,7 @@ then
   # For score-k8s ARM64
   [ $(uname -m) = aarch64 ] && curl -sLO "https://github.com/score-spec/score-k8s/releases/download/0.1.18/score-k8s_0.1.18_linux_arm64.tar.gz"
   tar xvzf score-k8s*.tar.gz
-  rm score-k8s*.tar.gz README.md LICENSE
+  rm -f score-k8s*.tar.gz README.md LICENSE 2>/dev/null || true
   run_as_root mv ./score-k8s /usr/local/bin/score-k8s
   run_as_root chown root: /usr/local/bin/score-k8s
 else
@@ -92,6 +121,32 @@ then
   run_as_root apt update && run_as_root apt install glow -y
 else
   echo "glow is already installed."
+fi
+
+# Install Starship prompt
+if ! command -v starship &> /dev/null
+then
+  echo "starship not found. Installing..."
+  curl -sS https://starship.rs/install.sh | sh -s -- -y
+else
+  echo "starship is already installed."
+fi
+
+# Configure starship
+mkdir -p $HOME/.config
+cp .devcontainer/configs/starship.toml $HOME/.config/starship.toml
+echo 'eval "$(starship init zsh)"' >> $HOME/.zshrc
+
+# Install Bitwarden Secrets Manager CLI
+if ! command -v bws &> /dev/null
+then
+  echo "Bitwarden Secrets Manager CLI not found. Installing..."
+  curl -sLO "https://github.com/bitwarden/sdk/releases/download/bws-v0.5.0/bws-x86_64-unknown-linux-gnu-0.5.0.zip"
+  unzip bws-x86_64-*-*.zip
+  run_as_root mv bws /usr/local/bin/bws
+  rm bws-x86_64-*-*.zip
+else
+  echo "Bitwarden Secrets Manager CLI is already installed."
 fi
 
 # Check if kubectl is installed
@@ -130,7 +185,7 @@ echo "complete -F __start_kubectl k" >> $HOME/.bashrc
 
 # Check if the network already exists and create it if it does not
 if ! docker network ls | grep -q 'kind'; then
-  docker network create -d=bridge -o com.docker.network.bridge.enable_ip_masquerade=true -o com.docker.network.driver.mtu=1500 --subnet fc00:f853:ccd:e793::/64 kind
+  docker network create -d=bridge -o com.docker.network.bridge.enable_ip_masquerade=true -o com.docker.network.driver.mtu=1500 --subnet fc00:f853:ccd:e793::/64 kind || echo "Warning: Could not create kind network (may already exist)"
 else
   echo "Network 'kind' already exists."
 fi
@@ -142,25 +197,25 @@ mkdir -p $BASE_DIR/state/kube
 reg_name='kind-registry'
 reg_port='5001'
 if [ "$(docker inspect -f '{{.State.Running}}' "${reg_name}" 2>/dev/null || true)" != 'true' ]; then
-  docker run -d --restart=always -p "127.0.0.1:${reg_port}:5000" --network bridge --name "${reg_name}" registry:2
+  docker run -d --restart=always -p "127.0.0.1:${reg_port}:5000" --network bridge --name "${reg_name}" registry:2 || echo "Warning: Could not create kind-registry container"
 fi
 
 # 2. Create Kind cluster
 if [ ! -f $BASE_DIR/state/kube/config.yaml ]; then
-  kind create cluster -n 5min-idp --kubeconfig $BASE_DIR/state/kube/config.yaml --config ./setup/kind/cluster.yaml
+  kind create cluster -n 5min-idp --kubeconfig $BASE_DIR/state/kube/config.yaml --config ./setup/kind/cluster.yaml || echo "Warning: Kind cluster creation failed"
 fi
 
 # connect current container to the kind network
 container_name="5min-idp"
-if [ "$(docker inspect -f='{{json .NetworkSettings.Networks.kind}}' "${container_name}")" = 'null' ]; then
-  docker network connect "kind" "${container_name}"
+if [ "$(docker inspect -f='{{json .NetworkSettings.Networks.kind}}' "${container_name}" 2>/dev/null)" = 'null' ]; then
+  docker network connect "kind" "${container_name}" 2>/dev/null || echo "Warning: Could not connect container to kind network"
 fi
 
 # used by humanitec-agent / inside docker to reach the cluster
 export kubeconfig_docker=$BASE_DIR/state/kube/config-internal.yaml
-kind export kubeconfig --internal -n 5min-idp --kubeconfig "$kubeconfig_docker"
+kind export kubeconfig --internal -n 5min-idp --kubeconfig "$kubeconfig_docker" 2>/dev/null || echo "Warning: Could not export internal kubeconfig"
 # used in general
-kind export kubeconfig --internal -n 5min-idp
+kind export kubeconfig --internal -n 5min-idp 2>/dev/null || echo "Warning: Could not export kubeconfig"
 
 # 3. Add the registry config to the nodes
 #
@@ -180,13 +235,13 @@ done
 
 # 4. Connect the registry to the cluster network if not already connected
 # This allows kind to bootstrap the network but ensures they're on the same network
-if [ "$(docker inspect -f='{{json .NetworkSettings.Networks.kind}}' "${reg_name}")" = 'null' ]; then
-  docker network connect "kind" "${reg_name}"
+if [ "$(docker inspect -f='{{json .NetworkSettings.Networks.kind}}' "${reg_name}" 2>/dev/null)" = 'null' ]; then
+  docker network connect "kind" "${reg_name}" 2>/dev/null || echo "Warning: Could not connect registry to kind network"
 fi
 
 # 5. Document the local registry
 # https://github.com/kubernetes/enhancements/tree/master/keps/sig-cluster-lifecycle/generic/1755-communicating-a-local-registry
-cat <<EOF | kubectl apply -f -
+cat <<EOF | kubectl apply -f - 2>/dev/null || echo "Warning: Could not apply local-registry-hosting configmap"
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -213,13 +268,13 @@ fi
 ### Export needed env-vars for terraform
 # Variables for TLS in Terraform
 # export TF_VAR_tls_ca_cert=$TLS_CA_CERT
-export TF_VAR_tls_cert_string=$PIDP_CERT
-export TF_VAR_tls_key_string=$PIDP_KEY
+export TF_VAR_tls_cert_string="${PIDP_CERT:-}"
+export TF_VAR_tls_key_string="${PIDP_KEY:-}"
 # Kubeconfig for Terraform
 export TF_VAR_kubeconfig=$kubeconfig_docker
 
-terraform -chdir=setup/terraform init
-terraform -chdir=setup/terraform apply -auto-approve
+terraform -chdir=setup/terraform init || echo "Warning: Terraform init failed"
+terraform -chdir=setup/terraform apply -auto-approve || echo "Warning: Terraform apply failed"
 
 # # Check if the gitea_runner container is already running
 # if [ "$(docker inspect -f '{{.State.Running}}' gitea_runner 2>/dev/null || true)" != 'true' ]; then
@@ -284,3 +339,176 @@ echo "alias sk='score-k8s'" >> $HOME/.bashrc
 
 echo ""
 echo ">>>> ready to roll."
+
+# Install Starship prompt
+echo "Installing Starship..."
+curl -sS https://starship.rs/install.sh | sh -s -- -y
+
+# Install Flux CLI
+echo "Installing Flux CLI..."
+curl -s https://fluxcd.io/install.sh | bash
+
+# Install Capacitor (Next)
+echo "Installing Capacitor (Next)..."
+wget -qO- https://gimlet.io/install-capacitor | bash
+
+# Create Starship config directory and config file
+echo "Configuring Starship..."
+mkdir -p ~/.config
+
+cat > ~/.config/starship.toml << 'STARSHIP_EOF'
+# Starship Configuration
+format = """
+$username\
+$hostname\
+$kubernetes\
+$docker_context\
+$directory\
+$git_branch\
+$git_status\
+$golang\
+$nodejs\
+$python\
+$terraform\
+$jobs\
+$cmd_duration\
+$line_break\
+$character"""
+
+right_format = """$time$battery$status$shell"""
+
+scan_timeout = 100
+command_timeout = 3000
+follow_symlinks = false
+
+[palettes.foo]
+blue = '21'
+mustard = '#af8700'
+
+[username]
+show_always = true
+format = '[$user]($style) '
+style_user = "fg:#F47A26"
+style_root = "fg:#F47A26"
+
+[hostname]
+ssh_only = false
+format = "[@$hostname]($style) "
+style = "fg:#F47A26 bold"
+
+[directory]
+truncation_length = 3
+truncate_to_repo = true
+format = "[$path]($style)[$read_only]($read_only_style) "
+style = "bg:none fg:#F47A26 bold"
+home_symbol = "~"
+truncation_symbol = "…/"
+
+[git_branch]
+format = '[$symbol$branch]($style) '
+symbol = ""
+style = "bold purple"
+truncation_length = 18
+
+[git_status]
+format = '([\[$all_status$ahead_behind\]]($style))'
+conflicted = "!"
+ahead = "↑${count}"
+diverged = "↕${ahead_count}↓${behind_count}"
+behind = "↓${count}"
+up_to_date = "✓"
+untracked = "?${count}"
+stashed = "*${count}"
+modified = "~${count}"
+staged = '+${count}'
+renamed = "→${count}"
+deleted = "✗${count}"
+style = "bold red"
+
+[kubernetes]
+symbol = "⎈ "
+format = '[$symbol$context( @$namespace)]($style) '
+style = "cyan bold"
+disabled = false
+detect_files = ['k8s', 'kubernetes']
+detect_folders = ['.kube']
+
+[[kubernetes.contexts]]
+context_pattern = ".*pangarabbit.*"
+context_alias = "pgr"
+style = "bold cyan"
+
+[[kubernetes.contexts]]
+context_pattern = ".*infra.*"
+context_alias = "dev"
+style = "bold green"
+
+[[kubernetes.contexts]]
+context_pattern = ".*nonprod.*"
+context_alias = "test"
+style = "bold yellow"
+
+[[kubernetes.contexts]]
+context_pattern = ".*prod.*"
+context_alias = "prod"
+style = "bold red"
+
+[docker_context]
+format = "[$symbol$context]($style) "
+symbol = "🐳 "
+only_with_files = true
+detect_files = ["docker-compose.yml", "docker-compose.yaml", "Dockerfile"]
+style = "blue bold"
+
+[cmd_duration]
+min_time = 5_000
+format = "⏱ [$duration]($style) "
+style = "bold yellow"
+
+[character]
+success_symbol = "[➜](bold green) "
+error_symbol = "[✗](bold red) "
+vicmd_symbol = "[←](bold green)"
+
+[golang]
+format = "[$symbol($version )]($style)"
+symbol = "🐹 "
+
+[nodejs]
+format = "[$symbol($version )]($style)"
+symbol = "⬢ "
+
+[python]
+format = "[$symbol($version )]($style)"
+symbol = "🐍 "
+
+[terraform]
+format = '[$symbol$workspace]($style) '
+symbol = "TF:"
+detect_folders = [".terraform"]
+style = "bold_105"
+
+[time]
+disabled = false
+format = "🕙[$time]($style) "
+time_format = "%H:%M"
+style = "bold white"
+
+[battery]
+disabled = true
+
+[status]
+disabled = true
+
+[shell]
+disabled = true
+STARSHIP_EOF
+
+# Configure zsh with Starship
+echo "Configuring zsh..."
+grep -q "starship init zsh" ~/.zshrc || echo 'eval "$(starship init zsh)"' >> ~/.zshrc
+
+# Set zsh as default shell (non-blocking, may fail in non-interactive environments)
+chsh -s $(which zsh) 2>/dev/null || echo "Note: Could not change default shell to zsh (non-critical)"
+
+echo ">>>> Starship, Flux, and Capacitor installed and configured"

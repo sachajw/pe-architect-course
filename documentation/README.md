@@ -1,7 +1,7 @@
 # PE Architecture - Remote Development Environment Documentation
 
 **Environment:** pe architecture (pangarabbit.coder)
-**Last Updated:** February 10, 2026
+**Last Updated:** February 19, 2026
 **Status:** ✅ Fully Configured
 
 ## Overview
@@ -26,55 +26,107 @@ This directory contains comprehensive documentation for your remote Platform Eng
    - Troubleshooting and best practices
    - Performance optimization
 
-3. **[SSHFS_SETUP_GUIDE.md](./SSHFS_SETUP_GUIDE.md)**
+3. **[SSH_CONFIGURATION.md](./SSH_CONFIGURATION.md)** ⭐ **NEW**
+   - SSH shortcuts (pangarabbit, proxy, sync, zed)
+   - Connection multiplexing
+   - Auto-tmux on connect
+   - SOCKS proxy setup
+   - Port forwarding reference
+
+4. **[SSHFS_SETUP_GUIDE.md](./SSHFS_SETUP_GUIDE.md)**
    - Alternative: SSHFS mounting (backup method)
    - Not recommended - use Zed Remote SSH instead
 
+### Workspace Bootstrap
+
+5. **[bootstrap.sh](./bootstrap.sh)** ⭐ **NEW**
+   - Run after workspace restart
+   - Installs Claude CLI, Capacitor, lsd
+   - Sets up aliases and starship
+   - Configures auto-start
+
+6. **[.aliases](./.aliases)** ⭐ **NEW**
+   - Linux-friendly aliases
+   - Git, k8s, helm, terraform
+   - aiops aliases (Claude, CCS)
+   - Capacitor management
+
 ### Shell & Terminal Configuration
 
-4. **[ZSH_REMOTE_SETUP.md](./ZSH_REMOTE_SETUP.md)**
+7. **[ZSH_REMOTE_SETUP.md](./ZSH_REMOTE_SETUP.md)**
    - Zsh installation and configuration
    - Shell aliases and functions
    - Environment variables
    - Kubernetes and Docker shortcuts
 
-5. **[STARSHIP_CONFIGURATION.md](./STARSHIP_CONFIGURATION.md)**
+8. **[STARSHIP_CONFIGURATION.md](./STARSHIP_CONFIGURATION.md)**
    - Starship prompt setup and customization
    - Module configuration (git, kubernetes, docker, etc.)
    - Performance tuning
    - Troubleshooting prompt issues
 
+9. **[starship.toml](./starship.toml)** ⭐ **NEW**
+   - Custom prompt configuration
+   - Kubernetes context display
+   - Git status formatting
+
 ### Kubernetes Dashboard (Capacitor)
 
-6. **[CAPACITOR_SETUP.md](./CAPACITOR_SETUP.md)**
-   - Capacitor Next installation guide
-   - Basic usage and configuration
-   - Command-line options
-   - Integration with Kind cluster
+10. **[CAPACITOR_SETUP.md](./CAPACITOR_SETUP.md)**
+    - Capacitor Next installation guide
+    - Basic usage and configuration
+    - Command-line options
+    - Integration with Kind cluster
 
-7. **[CAPACITOR_AUTOSTART.md](./CAPACITOR_AUTOSTART.md)**
-   - Auto-start configuration
-   - Management scripts (start/stop/status)
-   - Aliases and shortcuts
-   - Logging and troubleshooting
+11. **[CAPACITOR_AUTOSTART.md](./CAPACITOR_AUTOSTART.md)**
+    - Auto-start configuration
+    - Management scripts (start/stop/status)
+    - Aliases and shortcuts
+    - Logging and troubleshooting
 
-8. **[CAPACITOR_ACCESS_GUIDE.md](./CAPACITOR_ACCESS_GUIDE.md)**
-   - Accessing Capacitor from local browser
-   - Port forwarding setup (Zed and manual)
-   - Troubleshooting connection issues
-   - Alternative access methods
+12. **[CAPACITOR_ACCESS_GUIDE.md](./CAPACITOR_ACCESS_GUIDE.md)**
+    - Accessing Capacitor from local browser
+    - Port forwarding setup (Zed and manual)
+    - Troubleshooting connection issues
+    - Alternative access methods
 
 ### Coder Platform
 
-9. **[CODER_DEVCONTAINER_FIX.md](./CODER_DEVCONTAINER_FIX.md)**
-   - Devcontainer detection error fix
-   - Root cause analysis (envbuilder PATH issue)
-   - Permanent fix for postCreateCommand.sh
-   - Workspace health check procedures
+13. **[CODER_DEVCONTAINER_FIX.md](./CODER_DEVCONTAINER_FIX.md)**
+    - Devcontainer detection error fix
+    - Root cause analysis (envbuilder PATH issue)
+    - Permanent fix for postCreateCommand.sh
+    - Workspace health check procedures
+
+### CCS Configuration
+
+14. **[ccs-config/](./ccs-config/)** ⭐ **NEW**
+    - Profile settings (claude, gemini, glm, zai, etc.)
+    - Shared scripts (generate-configs.py)
+    - config.yaml - Main CCS config
 
 ## 🚀 Quick Start
 
+### After Workspace Restart
+
+Run the bootstrap script to restore your environment:
+
+```bash
+ssh pangarabbit.coder
+/workspaces/persistent/bootstrap.sh
+source ~/.zshrc
+```
+
 ### Connect to Environment
+
+**SSH Shortcuts:**
+```bash
+ssh pangarabbit.coder  # Full connect + auto-tmux + port forwards
+ssh cap.pangarabbit    # Connect + Capacitor focus
+ssh proxy.pangarabbit  # SOCKS proxy on :1080
+ssh sync.pangarabbit   # Quick sync (rsync/scp)
+ssh zed.pangarabbit    # Zed-optimized connection
+```
 
 **Using Zed (Recommended):**
 1. Open Zed
@@ -82,7 +134,7 @@ This directory contains comprehensive documentation for your remote Platform Eng
 3. Select "pe architecture"
 4. Navigate to `/workspaces/pe-coder-aidp`
 
-**Read:** [ZED_REMOTE_DEVELOPMENT.md](./ZED_REMOTE_DEVELOPMENT.md) for complete guide
+**Read:** [SSH_CONFIGURATION.md](./SSH_CONFIGURATION.md) for all SSH options
 
 ### Common Commands
 
@@ -137,6 +189,19 @@ gc -m "message"         # Git commit (gc = git commit)
 - ✅ **yq** - YAML processor
 - ✅ **score-k8s** - Score implementation for K8s
 - ✅ **Capacitor Next** - Kubernetes dashboard
+- ✅ **Claude CLI** - Anthropic's Claude Code
+- ✅ **lsd** - Modern ls replacement
+- ✅ **glow** - Markdown renderer
+
+### Bootstrap Script Installs
+Run `/workspaces/persistent/bootstrap.sh` after workspace restart:
+- Claude CLI
+- CCS CLI (if npm available)
+- Capacitor (Kubernetes dashboard)
+- lsd (modern ls)
+- Shell aliases
+- Starship prompt
+- Capacitor auto-start
 
 ### Kubernetes Cluster
 - **Name:** 5min-idp
@@ -348,5 +413,5 @@ Found an issue or have improvements?
 
 **📍 Documentation Location:** `/workspaces/pe-coder-aidp/documentation/`
 **🚀 Quick Access:** `docs` (alias) or browse in Zed file explorer
-**📖 Total Files:** 10 documentation files
-**✨ Last Updated:** February 10, 2026 ✓
+**📖 Total Files:** 14+ documentation files
+**✨ Last Updated:** February 19, 2026 ✓

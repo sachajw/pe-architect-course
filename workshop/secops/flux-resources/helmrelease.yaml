@@ -1,0 +1,25 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: falco
+  namespace: falco-system
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: falco
+      version: "4.x"
+      sourceRef:
+        kind: HelmRepository
+        name: falcosecurity
+        namespace: falco-system
+      interval: 1m
+  values:
+    driver:
+      kind: modern_ebpf
+    falco:
+      grpc:
+        enabled: true
+      grpcOutput:
+        enabled: true
+    tty: true
