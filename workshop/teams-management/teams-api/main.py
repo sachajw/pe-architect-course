@@ -101,17 +101,83 @@ app.add_middleware(
 )
 
 # Pydantic models
+# ---------------------------------------------------------------------------
 class TeamCreate(BaseModel):
     name: str
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, v: str) -> str:
+        v = v.strip()
+        if len(v) < 2 or len(v) > 63:
+            raise ValueError("Team name must be between 2 and 63 characters")
+        if not re.match(r"^[a-zA-Z0-9_-]+$", v):
+            raise ValueError(
+                "Team name may only contain alphanumeric characters, hyphens, and underscores"
+            )
+        return v
+
 
 class Team(BaseModel):
     id: str
     name: str
     created_at: datetime
 
+
+# ---------------------------------------------------------------------------
+# Database / lifespan
+# ---------------------------------------------------------------------------
+DB_PATH = os.getenv("DB_PATH", "teams.db")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    db = await aiosqlite.connect(DB_PATH)
+    db.row_factory = aiosqlite.Row
+    await db.execute(
+        """
+        CREATE TABLE IF NOT EXISTS teams (
+            id TEXT PRIMARY KEY,
+            name TEXT UNIQUE NOT NULL,
+            created_at TEXT NOT NULL
+        )
+        """
+    )
+    await db.commit()
+    app.state.db = db
+    yield
+    await db.close()
+
+
+# ---------------------------------------------------------------------------
+# App & CORS
+# ---------------------------------------------------------------------------
+app = FastAPI(
+    title="Teams API",
+    description="A simple API for team leads to create and manage teams",
+    version="1.0.0",
+    lifespan=lifespan,
+)
+
+allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:4200").split(",")
+is_wildcard = allowed_origins == ["*"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
+    allow_credentials=False if is_wildcard else True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# ---------------------------------------------------------------------------
+# Routes
+# ---------------------------------------------------------------------------
 @app.get("/")
 async def root():
     return {"message": "Teams API is running", "storage": "sqlite"}
+
 
 @app.post("/teams", response_model=Team)
 async def create_team(team: TeamCreate):
@@ -121,7 +187,6 @@ async def create_team(team: TeamCreate):
     if existing:
         raise HTTPException(status_code=400, detail="Team name already exists")
 
-    # Generate unique ID and create team
     team_id = str(uuid.uuid4())
     created_at = datetime.now()
 
